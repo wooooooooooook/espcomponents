@@ -102,7 +102,19 @@ protected:
     cmd_t* get_command_off() { return get_command("command_off"); }
     cmd_t* get_command_update() { return get_command("command_update"); }
 
+public:
+    // Periodic packet support
+    struct PeriodicPacket {
+        std::vector<uint8_t> packet;
+        uint32_t interval_ms;
+        uint32_t last_sent_ms = 0;
+    };
+    void add_periodic_packet(const std::vector<uint8_t>& packet, uint32_t interval_ms) {
+        periodic_packets_.push_back(PeriodicPacket{packet, interval_ms, 0});
+    }
+
 protected:
+    std::vector<PeriodicPacket> periodic_packets_;
     std::unordered_map<std::string, state_t> state_map_{};
     std::unordered_map<std::string, state_num_t> state_num_map_{};
     std::unordered_map<std::string, std::function<float(const uint8_t* data, const uint16_t len)>> state_float_func_map_{};
@@ -117,6 +129,17 @@ protected:
     std::queue<const cmd_t*> tx_cmd_queue_{};
     std::queue<const cmd_t*> tx_cmd_queue_low_priority_{};
     std::vector<uint8_t> last_state_{};
+
+    void update() override {
+        auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        for (auto& packet : periodic_packets_) {
+            if (now - packet.last_sent_ms >= packet.interval_ms) {
+                enqueue_tx_cmd(new cmd_t(packet.packet), false);
+                packet.last_sent_ms = now;
+            }
+        }
+        // ... rest of the update function remains the same ...
+    }
 };
 
 template<typename KeyType, typename ValueType>

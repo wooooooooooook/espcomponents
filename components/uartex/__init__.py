@@ -131,8 +131,15 @@ def command_hex_schema(value):
     return shorthand_command_hex(value)
 
 # UARTEx Schema
+from .const import CONF_PERIODIC, CONF_PACKET, CONF_INTERVAL
+
 CONFIG_SCHEMA = cv.All(cv.Schema({
     cv.GenerateID(): cv.declare_id(UARTExComponent),
+    cv.Optional(CONF_PERIODIC, default=[]): cv.ensure_list(cv.Schema({
+        cv.Required(CONF_PACKET): validate_hex_data,
+        cv.Required(CONF_INTERVAL): cv.positive_time_period_seconds,
+    })),
+
     cv.Optional(CONF_RX_TIMEOUT, default="10ms"): cv.All(
         cv.positive_time_period_milliseconds,
         cv.Range(max=core.TimePeriod(milliseconds=2000)),
@@ -203,6 +210,12 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
+
+    # Periodic packet support
+    for periodic in config.get(CONF_PERIODIC, []):
+        packet = periodic[CONF_PACKET]
+        interval = int(periodic[CONF_INTERVAL].total_seconds() * 1000)  # ms
+        cg.add(var.add_periodic_packet(packet, interval))
 
     if CONF_VERSION in config:
         if not config[CONF_VERSION][CONF_DISABLED]:

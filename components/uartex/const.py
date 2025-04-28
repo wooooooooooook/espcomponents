@@ -1,6 +1,10 @@
 # coding=utf-8
 """Constants used by esphome."""
 
+CONF_PERIODIC = 'periodic'
+CONF_PACKET = 'packet'
+CONF_INTERVAL = 'interval'
+
 CONF_UARTEX_ID = 'uartex_id'
 CONF_RX_TIMEOUT = 'rx_timeout'
 CONF_RX_LENGTH = 'rx_length'

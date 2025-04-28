@@ -7,6 +7,16 @@ static const char *TAG = "uartex";
 
 void UARTExDevice::update()
 {
+    unsigned long now = get_time();
+    for (auto& periodic : periodic_packets_) {
+        if (now - periodic.last_sent_ms >= periodic.interval_ms) {
+            // Use a static cmd_t to avoid memory leak (or manage lifetime carefully)
+            static std::vector<cmd_t> periodic_cmds;
+            periodic_cmds.emplace_back(periodic.packet);
+            enqueue_tx_cmd(&periodic_cmds.back(), false);
+            periodic.last_sent_ms = now;
+        }
+    }
     enqueue_tx_cmd(get_command_update(), true);
 }
 
