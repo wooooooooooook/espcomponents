@@ -17,7 +17,6 @@ from .const import CONF_RX_HEADER, CONF_RX_FOOTER, CONF_TX_HEADER, CONF_TX_FOOTE
     CONF_STATE_RESPONSE, CONF_LENGTH, CONF_PRECISION, CONF_RX_LENGTH, \
     CONF_TX_CTRL_PIN, CONF_TX_DELAY, CONF_DISABLED, CONF_ASCII, CONF_SIGNED, CONF_ENDIAN, CONF_DECODE
 
-AUTO_LOAD = ["text_sensor"]
 CODEOWNERS = ["@eigger"]
 DEPENDENCIES = ["uart", "socket"]
 uartex_ns = cg.esphome_ns.namespace('uartex')
@@ -36,6 +35,11 @@ WriteTrigger = uartex_ns.class_("WriteTrigger", automation.Trigger.template())
 ReadTrigger = uartex_ns.class_("ReadTrigger", automation.Trigger.template())
 
 MULTI_CONF = True
+
+def validate_version(config):
+    cv.All(cv.version_number, cv.validate_esphome_version)("2025.11.0")
+    return config
+
 Checksum = uartex_ns.enum("CHECKSUM")
 CHECKSUMS = {
     "NONE": Checksum.CHECKSUM_NONE,

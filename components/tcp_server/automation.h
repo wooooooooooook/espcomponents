@@ -1,27 +1,15 @@
 #pragma once
 
-#include "uartex.h"
+#include "tcp_server.h"
 #include "esphome/core/automation.h"
 
 namespace esphome {
-namespace uartex {
-
-class TxTimeoutTrigger : public Trigger<>
-{
-public:
-    explicit TxTimeoutTrigger(UARTExComponent *parent)
-    {
-        parent->add_on_error_callback([this](const ERROR error)
-        {
-            if (error == ERROR_TX_TIMEOUT) this->trigger();
-        });
-    }
-};
+namespace tcp_server {
 
 class WriteTrigger : public Trigger<const uint8_t*, const uint16_t>
 {
 public:
-    explicit WriteTrigger(UARTExComponent *parent)
+    explicit WriteTrigger(TCP_ServerComponent *parent)
     {
         parent->add_on_write_callback([this](const uint8_t *data, const uint16_t len)
         {
@@ -33,7 +21,7 @@ public:
 class ReadTrigger : public Trigger<const uint8_t*, const uint16_t>
 {
 public:
-    explicit ReadTrigger(UARTExComponent *parent)
+    explicit ReadTrigger(TCP_ServerComponent *parent)
     {
         parent->add_on_read_callback([this](const uint8_t *data, const uint16_t len)
         {
@@ -43,42 +31,38 @@ public:
 };
 
 template <typename... Ts>
-class UARTExWriteAction : public Action<Ts...>, public Parented<UARTExComponent>
+class TCP_ServerWriteAction : public Action<Ts...>, public Parented<TCP_ServerComponent>
 {
 public:
-    void set_data_template(std::function<cmd_t(Ts...)> func)
+    void set_data_template(std::function<std::vector<uint8_t>(Ts...)> func)
     {
         this->data_func_ = func;
         this->static_ = false;
     }
-    void set_data_static(const cmd_t &data)
+    void set_data_static(std::vector<uint8_t>& data)
     {
         this->data_static_ = data;
         this->static_ = true;
     }
 
-#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
-    void play(const Ts&... x) override
-#else
     void play(Ts... x) override
-#endif
     {
         if (this->static_)
         {
-            this->parent_->enqueue_tx_data({nullptr, &this->data_static_});
+            this->parent_->write_array(this->data_static_);
         }
         else
         {
             data_static_ = this->data_func_(x...);
-            this->parent_->enqueue_tx_data({nullptr, &this->data_static_});
+            this->parent_->write_array(this->data_static_);
         }
     }
 
 protected:
     bool static_{false};
-    std::function<cmd_t(Ts...)> data_func_{};
-    cmd_t data_static_{};
+    std::function<std::vector<uint8_t>(Ts...)> data_func_{};
+    std::vector<uint8_t> data_static_{};
 };
 
-}  // namespace uartex
+}  // namespace tcp_server
 }  // namespace esphome
